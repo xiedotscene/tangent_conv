@@ -51,7 +51,7 @@ def get_stanford():
 							continue
 						
 						spl = entry.split()
-						
+
 						if len(spl) != 6:
 							continue
 
@@ -197,25 +197,69 @@ def get_semantic3d():
 		colors = []
 		labels = []
 
-		with open(os.path.join(args.input_folder, key, "scan.txt"), "r") as f:
-			cnt = 0
-			for entry in f:
-				res = [float(c) for c in entry.split()]
-				points.append(np.asarray(res[0:3]))
-				colors.append(np.asarray(res[6:7] + res[5:6] + res[4:5]) / 255.0)
-				if cnt % 100000 == 0:
-					print(cnt)
-				cnt += 1
-		
-		os.mkdir(os.path.join(args.output_folder, key))
-		pcd = PointCloud()
-		pcd.points = Vector3dVector(points)
-		pcd.colors = Vector3dVector(colors)
-		write_point_cloud(os.path.join(args.output_folder, key, "scan.pcd"), pcd)
+		if not os.path.exists(os.path.join(args.output_folder, key)):
+			print(key)
+			all_pcd = PointCloud()
+			with open(os.path.join(args.input_folder, key, "scan.txt"), "r") as f:
+				cnt = 0
+				for entry in f:
+					res = [float(c) for c in entry.split()]
+					points.append(np.asarray(res[0:3]))
+					colors.append(np.asarray(res[6:7] + res[5:6] + res[4:5]) / 255.0)
+					if cnt % 100000 == 0:
+						print(cnt)
+					cnt += 1
+					if cnt % 20000000 == 0:
+						pcd = PointCloud()
+						print("Converting points")
+						pcd.points = Vector3dVector(points)
+						pcd.colors = Vector3dVector(colors)
+						all_pcd += pcd
+						points = []
+						colors = []
+				print("Converting points")
+				pcd.points = Vector3dVector(points)
+				pcd.colors = Vector3dVector(colors)
+				all_pcd += pcd
 
-		cmd = "cp " + os.path.join(args.input_folder, key, "scan.labels") + " " + os.path.join(args.output_folder, key, "scan.labels")
+			os.mkdir(os.path.join(args.output_folder, key))
+			# all_pcd.points = Vector3dVector(points)
+			# all_pcd.colors = Vector3dVector(colors)
+			write_point_cloud(os.path.join(args.output_folder, key, "scan.pcd"), all_pcd)
+
+			cmd = "cp " + os.path.join(args.input_folder, key, "scan.labels") + " " + os.path.join(args.output_folder, key, "scan.labels")
+			os.system(cmd)
+
+def get_dotscene():
+	pcd_dir_name = args.input_folder
+	mission = os.path.basename(os.path.dirname(pcd_dir_name))
+	# print(mission)
+	print("rearrange PCD point clouds...")
+	scans = list_files_single(pcd_dir_name)
+	for scan in scans:
+		scan_name = os.path.splitext(scan)[0]
+		print(mission + "_" + scan_name)
+
+		out_dir_name = os.path.join(args.output_folder, "{}_{}".format(mission, scan_name))
+		make_dir(out_dir_name)
+
+		cmd = "cp " + os.path.join(pcd_dir_name, scan) + " " + os.path.join(out_dir_name, "scan.pcd")
 		os.system(cmd)
 
+		pcd = read_point_cloud(os.path.join(out_dir_name, "scan.pcd"))
+		np_points = np.asarray(pcd.points)
+		num_points = np_points.shape[0]
+
+		# add colors and normals
+		if not pcd.has_normals():
+			pcd.estimate_normals(30)
+		if not pcd.has_colors():
+			pcd.paint_uniform_color([1, 0, 0])
+		write_point_cloud(os.path.join(out_dir_name, "scan.pcd"), pcd)
+
+		with open(os.path.join(out_dir_name, "scan.labels"), "w") as f:
+			f.writelines(["1\n" for item in range(num_points)])
+	print("Done.")
 
 
 if args.dataset == "stanford":
@@ -224,5 +268,7 @@ elif args.dataset == "scannet":
 	get_scannet()
 elif args.dataset == "semantic3d":
 	get_semantic3d()
+elif args.dataset == "dotscene":
+	get_dotscene()
 else:
 	print("Wrong dataset type")

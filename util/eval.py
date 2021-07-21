@@ -23,6 +23,10 @@ class param:
 			self.d_par = scannet_params()
 		elif dataset_type == "semantic3d":
 			self.d_par = semantic3d_params()
+		elif dataset_type == "dotsceneIn":
+			self.d_par = dotsceneIn_params()
+		elif dataset_type == "dotsceneOut":
+			self.d_par = dotsceneOut_params()
 
 def build_conf_matrix(gt_list, pr_list):
 	cnt = 0

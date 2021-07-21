@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/xie/tangent_conv/experiments/stanford/dhn/snapshots/model-226000"
+all_model_checkpoint_paths: "/home/xie/tangent_conv/experiments/stanford/dhn/snapshots/model-226000"

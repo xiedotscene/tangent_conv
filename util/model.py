@@ -30,6 +30,10 @@ class param:
 			self.d_par = scannet_params()
 		elif dataset_type == "semantic3d":
 			self.d_par = semantic3d_params()
+		elif dataset_type == "dotsceneIn":
+			self.d_par = dotsceneIn_params()
+		elif dataset_type == "dotsceneOut":
+			self.d_par = dotsceneOut_params()
 		self.input_type = config['tt_input_type']
 		self.max_snapshots = config['tt_max_snapshots']
 		self.test_iter = config['tt_test_iter']
@@ -47,7 +51,7 @@ class param:
 
 		###
 
-		if isinstance(self.d_par, semantic3d_params):
+		if isinstance(self.d_par, semantic3d_params) or isinstance(self.d_par, dotsceneOut_params):
 			self.data_sampling_type = 'part'
 		else:
 			self.data_sampling_type = 'full'
@@ -119,6 +123,7 @@ class model():
 			return get_batch_from_full_scan(self.training_data[scan_num], self.par.num_scales, self.par.d_par.class_weights)
 		else:
 			scan_num = iter_num % self.par.batch_array_size
+			#print("scan_num: {}, iter_num: {}, batch_array_size: {}".format(scan_num, iter_num, self.par.batch_array_size))
 			if scan_num == 0:
 				random_scan = random.randint(0, len(self.training_data)-1)
 				self.tr_batch_array = get_batch_array(self.training_data[random_scan], self.par)
@@ -273,6 +278,7 @@ class model():
 			global_step=self.training_step)
 
 	def load_snapshot(self):
+		#print("training_step before loading snapshot: %d" %self.training_step)
 		snapshot_name = tf.train.latest_checkpoint(self.par.snapshot_dir)
 		if snapshot_name is not None:
 			model_file_name = os.path.basename(snapshot_name)
@@ -280,6 +286,7 @@ class model():
 			itn = int(model_file_name.split('-')[1])
 			self.training_step = itn
 			self.saver.restore(self.sess, snapshot_name)
+		#print("training_step after loading snapshot: %d" %self.training_step)
 
 	def train(self):
 		bs = self.par.batch_size
